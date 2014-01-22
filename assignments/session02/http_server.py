@@ -1,14 +1,47 @@
 import socket
 import sys
+import os
+from urlparse import urlparse
+'''
+    url = 'http://example.com/random/folder/path.html'
+    parse_object = urlparse(url)
+    parse_object.netloc
+    # 'example.com'
+    parse_object.path
+    # '/random/folder/path.html'
+'''
+
+def resolve_uri(uri):
+    # get home dir (start with script location)
+    home = (sys.path[0])
+    dir_list = []
+    # if uri exists as path...
+    if os.path.isdir(home + '/webroot' + uri):
+        # ...create a list with the contents
+        uri_dir = os.listdir(home + '/webroot' + uri)
+        # convert unicode list to printable list
+        for x, word in enumerate(uri_dir):
+            dir_list.append(str(word))
+        return dir_list, 'text/plain'
 
 
-def response_ok():
+
+
+
+
+def response_ok(body, mimetype):
     """returns a basic HTTP response"""
     resp = []
     resp.append("HTTP/1.1 200 OK")
-    resp.append("Content-Type: text/plain")
+    if mimetype != "":
+        resp.append("Content-Type: text/plain")
+    else:
+        resp.append(mimetype)
     resp.append("")
-    resp.append("this is a pretty minimal response")
+    if body != "":
+        resp.append(body)
+    else:
+        resp.append("this is a pretty minimal response")
     return "\r\n".join(resp)
 
 
@@ -25,7 +58,9 @@ def parse_request(request):
     method, uri, protocol = first_line.split()
     if method != "GET":
         raise NotImplementedError("We only accept GET")
-    print >>sys.stderr, 'request is okay'
+    print >> sys.stderr, 'request is okay'
+    # return first_line [everything after 'Get /' up to next space]
+    return uri
 
 
 def server():
@@ -35,7 +70,7 @@ def server():
     print >>sys.stderr, "making a server on %s:%s" % address
     sock.bind(address)
     sock.listen(1)
-    
+
     try:
         while True:
             print >>sys.stderr, 'waiting for a connection'
@@ -60,10 +95,12 @@ def server():
                 conn.sendall(response)
             finally:
                 conn.close()
-            
+
     except KeyboardInterrupt:
         sock.close()
         return
+
+
 
 
 if __name__ == '__main__':
